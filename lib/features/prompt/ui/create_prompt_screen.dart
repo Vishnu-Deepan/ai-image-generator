@@ -1,11 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
-
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '../bloc/prompt_bloc.dart';
 
 class CreatePromptScreen extends StatefulWidget {
-  const CreatePromptScreen({super.key});
+  const CreatePromptScreen({Key? key}) : super(key: key);
 
   @override
   State<CreatePromptScreen> createState() => _CreatePromptScreenState();
@@ -17,10 +20,36 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
 
   bool _keyboardIsVisible = false;
 
+  // Google Ad
+  late BannerAd _bannerAd;
+  late bool isBannerAdLoaded = false;
+
   @override
   void initState() {
     promptBloc.add(PromptInitialEvent());
     super.initState();
+    _initAds();
+  }
+
+  void _initAds() {
+    _initBannerAd();
+  }
+
+  void _initBannerAd() {
+    _bannerAd = BannerAd(
+      size: AdSize.banner,
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Test ad unit ID
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            isBannerAdLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {},
+      ),
+      request: const AdRequest(),
+    );
+    _bannerAd.load();
   }
 
   @override
@@ -41,6 +70,17 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(60.0),
           child: AppBar(
+            actions: [
+              IconButton(
+                onPressed: () {
+                  final currentState = promptBloc.state;
+                  if (currentState is PromptGeneratingImageSuccessState) {
+                    _saveImageToLocal(currentState.uint8list);
+                  }
+                },
+                icon: const Icon(Icons.download),
+              ),
+            ],
             title: const Text("AI Image Generator"),
             centerTitle: true,
             titleSpacing: 0.0,
@@ -69,7 +109,7 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Text(
+                        const Text(
                           'Generating Image...',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -87,6 +127,7 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                             color: Colors.grey[300],
                           ),
                         ),
+                        // Banner Ad
                       ],
                     ),
                   ),
@@ -98,9 +139,9 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                 );
 
               case PromptGeneratingImageSuccessState:
-                final successState =
-                state as PromptGeneratingImageSuccessState;
+                final successState = state as PromptGeneratingImageSuccessState;
                 return SingleChildScrollView(
+                  // Your success UI
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -118,12 +159,24 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                         height: MediaQuery.of(context).viewInsets.bottom,
                       ),
                       Container(
-                        height: MediaQuery.of(context).size.height-MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height -
+                            MediaQuery.of(context).size.width,
                         color: Colors.grey.shade900,
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Center(
+                              //GOOGLE ADS
+                              child: isBannerAdLoaded
+                                  ? Container(
+                                height: _bannerAd.size.height.toDouble(),
+                                width: _bannerAd.size.width.toDouble(),
+                                child: AdWidget(ad: _bannerAd),
+                              )
+                                  : const SizedBox(),
+                            ),
+                            const SizedBox(height: 20,),
                             const Text("Enter your Prompt : "),
                             const SizedBox(height: 20),
                             TextField(
@@ -146,21 +199,21 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                   ),
-                                  backgroundColor:
-                                  MaterialStateProperty.all(
+                                  backgroundColor: MaterialStateProperty.all(
                                       Colors.deepPurple),
                                 ),
                                 onPressed: () {
                                   if (controller.text.isNotEmpty) {
                                     promptBloc.add(PromptEnteredEvent(
-                                        prompt: controller.text));
+                                      prompt: controller.text,
+                                    ));
                                   }
                                 },
-                                icon: const Icon(
-                                    Icons.generating_tokens_outlined),
+                                icon: const Icon(Icons.generating_tokens_outlined),
                                 label: const Text("Generate Image"),
                               ),
-                            )
+                            ),
+                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
@@ -179,8 +232,19 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
 
   int calculateMaxLines(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
-    double estimatedLineHeight = 130.0;
+    double estimatedLineHeight = 140.0;
     int maxLines = (screenHeight / estimatedLineHeight).floor();
     return maxLines;
+  }
+
+  Future<void> _saveImageToLocal(Uint8List imageBytes) async {
+    final directory = await getExternalStorageDirectory();
+    final imageFile = File('$directory/generated_image.png');
+    await imageFile.writeAsBytes(imageBytes);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(directory as String),
+      ),
+    );
   }
 }
