@@ -1,3 +1,7 @@
+# Do not detect
+*.cc -linguist-detectable
+*.cpp -linguist-detectable
+
 # Miscellaneous
 *.class
 *.log
