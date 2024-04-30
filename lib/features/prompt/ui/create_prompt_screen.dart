@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:io';
+import 'package:gallery_saver/gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
 import '../bloc/prompt_bloc.dart';
 
@@ -75,7 +76,7 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                 onPressed: () {
                   final currentState = promptBloc.state;
                   if (currentState is PromptGeneratingImageSuccessState) {
-                    _saveImageToLocal(currentState.uint8list);
+                    _saveImageToLocal(context, currentState.uint8list);
                   }
                 },
                 icon: const Icon(Icons.download),
@@ -103,7 +104,10 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                           baseColor: Colors.white10!,
                           highlightColor: Colors.lightGreenAccent!,
                           child: Container(
-                            width: MediaQuery.of(context).size.width / 2,
+                            width: MediaQuery
+                                .of(context)
+                                .size
+                                .width / 2,
                             height: 10,
                             color: Colors.white,
                           ),
@@ -146,7 +150,10 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        height: MediaQuery.of(context).size.width,
+                        height: MediaQuery
+                            .of(context)
+                            .size
+                            .width,
                         width: double.maxFinite,
                         decoration: BoxDecoration(
                           image: DecorationImage(
@@ -156,11 +163,20 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                         ),
                       ),
                       SizedBox(
-                        height: MediaQuery.of(context).viewInsets.bottom,
+                        height: MediaQuery
+                            .of(context)
+                            .viewInsets
+                            .bottom,
                       ),
                       Container(
-                        height: MediaQuery.of(context).size.height -
-                            MediaQuery.of(context).size.width,
+                        height: MediaQuery
+                            .of(context)
+                            .size
+                            .height -
+                            MediaQuery
+                                .of(context)
+                                .size
+                                .width,
                         color: Colors.grey.shade900,
                         padding: const EdgeInsets.all(24),
                         child: Column(
@@ -176,13 +192,17 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                               )
                                   : const SizedBox(),
                             ),
-                            const SizedBox(height: 20,),
-                            const Text("Enter your Prompt : "),
+                            // const SizedBox(height: 20,),
+                            // const Text("Enter your Prompt : "),
                             const SizedBox(height: 20),
                             TextField(
                               controller: controller,
                               maxLines: calculateMaxLines(context),
                               decoration: InputDecoration(
+                                labelStyle: const TextStyle(
+                                  color: Colors.white60,
+                                ),
+                                labelText: 'Enter your Prompt ',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(20),
                                 ),
@@ -209,8 +229,16 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                                     ));
                                   }
                                 },
-                                icon: const Icon(Icons.generating_tokens_outlined),
-                                label: const Text("Generate Image"),
+                                icon: const Icon(
+                                  Icons.generating_tokens_outlined,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  "Generate Image",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -231,20 +259,57 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
   }
 
   int calculateMaxLines(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;
-    double estimatedLineHeight = 140.0;
+    double screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
+    double estimatedLineHeight = 190.0;
     int maxLines = (screenHeight / estimatedLineHeight).floor();
     return maxLines;
   }
 
-  Future<void> _saveImageToLocal(Uint8List imageBytes) async {
-    final directory = await getExternalStorageDirectory();
-    final imageFile = File('$directory/generated_image.png');
-    await imageFile.writeAsBytes(imageBytes);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(directory as String),
-      ),
-    );
+  Future<void> _saveImageToLocal(BuildContext context, Uint8List imageBytes) async {
+    try {
+      final directory = await getExternalStorageDirectory();
+      if (directory == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: External storage directory not found.'),
+          ),
+        );
+        return;
+      }
+
+      final String storageRootPath = directory.path;
+      final String visifyFolderPath = '$storageRootPath/Visify';
+
+      // Create the "Visify" folder if it doesn't exist
+      final visifyFolder = Directory(visifyFolderPath);
+      if (!await visifyFolder.exists()) {
+        await visifyFolder.create();
+      }
+
+      final imageFile = File('$visifyFolderPath/generated_image.png');
+      await imageFile.writeAsBytes(imageBytes);
+
+      // Save the image to the device's media store
+      await GallerySaver.saveImage(imageFile.path);
+
+      print(visifyFolderPath);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Image saved to Visify folder and added to gallery.'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving image: $e'),
+        ),
+      );
+      print(e);
+
+    }
   }
+
 }
