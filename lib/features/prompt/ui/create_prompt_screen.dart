@@ -101,8 +101,8 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Shimmer.fromColors(
-                          baseColor: Colors.white10!,
-                          highlightColor: Colors.lightGreenAccent!,
+                          baseColor: Colors.white10,
+                          highlightColor: Colors.lightGreenAccent,
                           child: Container(
                             width: MediaQuery
                                 .of(context)

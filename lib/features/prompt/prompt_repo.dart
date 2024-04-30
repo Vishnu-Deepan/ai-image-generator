@@ -1,42 +1,49 @@
-import 'dart:developer';
+import 'dart:convert';
 import 'dart:typed_data';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
+import '../../config.dart';
 
 class PromptRepo {
   static Future<Uint8List?> generateImage(String prompt) async {
     try {
-      String url = 'https://api.vyro.ai/v1/imagine/api/generations';
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer vk-lqFP73F1MIRyN6DuzbnV4BZjW27H44lg2s7Jzb3mAFJ5sx'
-      };
+      final response = await http.post(
+        Uri.parse('https://api.getimg.ai/v1/models?pipeline=text-to-image&family=stable-diffusion-xl'),
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'authorization': bearerKey,
+        },
+        body: jsonEncode({
+          'model': 'stable-diffusion-xl-v1-0',
+          'prompt': prompt,
+          'width': 1536,
+          'height': 1536,
+          'steps': 100,
+        }),
+      );
 
-      Map<String, dynamic> payload = {
-        'prompt': prompt,
-        'style_id': '122',
-        'aspect_ratio': '1:1',
-        'cfg': '5',
-        'seed': '1',
-        'high_res_results': '1'
-      };
+      final dynamic responseData = jsonDecode(response.body);
 
-      FormData formData = FormData.fromMap(payload);
-
-      Dio dio = Dio();
-      dio.options =
-          BaseOptions(headers: headers, responseType: ResponseType.bytes);
-
-      final response = await dio.post(url, data: formData);
       if (response.statusCode == 200) {
-        log(response.data.runtimeType.toString());
-        log(response.data.toString());
-        Uint8List uint8List = Uint8List.fromList(response.data);
-        return uint8List;
+        final String imageDataString = responseData['image'];
+        final Uint8List imageData = base64Decode(imageDataString);
+        return imageData;
+      } else if (response.statusCode == 400) {
+        print('Error 400: ${responseData['error']['message']}');
+        return null;
+      } else if (response.statusCode == 401) {
+        print('Error 401: ${responseData['error']['message']}');
+        return null;
+      } else if (response.statusCode == 429) {
+        print('Error 429: ${responseData['error']['message']}');
+        return null;
       } else {
+        print('Error ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      log(e.toString());
+      print('Error: $e');
+      return null;
     }
-    return null;
   }
 }

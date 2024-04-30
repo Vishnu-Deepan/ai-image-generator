@@ -17,6 +17,7 @@ class PromptBloc extends Bloc<PromptEvent, PromptState> {
   FutureOr<void> promptEnteredEvent(
       PromptEnteredEvent event, Emitter<PromptState> emit) async {
     emit(PromptGeneratingImageLoadState());
+
     Uint8List? bytes = await PromptRepo.generateImage(event.prompt);
     if (bytes != null) {
       emit(PromptGeneratingImageSuccessState(bytes));
