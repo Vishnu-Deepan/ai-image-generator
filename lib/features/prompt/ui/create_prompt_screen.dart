@@ -24,6 +24,9 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
   // Google Ad
   late BannerAd _bannerAd;
   late bool isBannerAdLoaded = false;
+  //large in load screen
+  late NativeAd _nativeAd;
+  late bool isNativeAdLoaded = false;
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
   }
 
   void _initAds() {
+    _initNativeAd();
     _initBannerAd();
   }
 
@@ -51,6 +55,54 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
       request: const AdRequest(),
     );
     _bannerAd.load();
+  }
+  void _initNativeAd() {
+    _nativeAd = NativeAd(
+        adUnitId: Platform.isAndroid
+            ? 'ca-app-pub-3940256099942544/2247696110'
+            : 'ca-app-pub-3940256099942544/3986624511',
+        listener: NativeAdListener(
+          onAdLoaded: (ad) {
+            debugPrint('$NativeAd loaded.');
+            setState(() {
+              isNativeAdLoaded = true;
+            });
+          },
+          onAdFailedToLoad: (ad, error) {
+            // Dispose the ad here to free resources.
+            debugPrint('$NativeAd failed to load: $error');
+            ad.dispose();
+          },
+        ),
+        request: const AdRequest(),
+        // Styling
+        nativeTemplateStyle: NativeTemplateStyle(
+            // Required: Choose a template.
+            templateType: TemplateType.medium,
+            // Optional: Customize the ad's style.
+            mainBackgroundColor: Colors.purple,
+            cornerRadius: 10.0,
+            callToActionTextStyle: NativeTemplateTextStyle(
+                textColor: Colors.cyan,
+                backgroundColor: Colors.red,
+                style: NativeTemplateFontStyle.monospace,
+                size: 16.0),
+            primaryTextStyle: NativeTemplateTextStyle(
+                textColor: Colors.red,
+                backgroundColor: Colors.cyan,
+                style: NativeTemplateFontStyle.italic,
+                size: 16.0),
+            secondaryTextStyle: NativeTemplateTextStyle(
+                textColor: Colors.green,
+                backgroundColor: Colors.black,
+                style: NativeTemplateFontStyle.bold,
+                size: 16.0),
+            tertiaryTextStyle: NativeTemplateTextStyle(
+                textColor: Colors.brown,
+                backgroundColor: Colors.amber,
+                style: NativeTemplateFontStyle.normal,
+                size: 16.0)))
+      ..load();
   }
 
   @override
@@ -93,21 +145,32 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
           listener: (context, state) {},
           builder: (context, state) {
             switch (state.runtimeType) {
+              // LOAD PAGE
               case PromptGeneratingImageLoadState:
                 return Container(
                   color: Colors.black,
                   child: Center(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
+                        if (isNativeAdLoaded)
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minWidth: 320, // minimum recommended width
+                              minHeight: 320, // minimum recommended height
+                              maxWidth: 400,
+                              maxHeight: 400,
+                            ),
+                            child: AdWidget(ad: _nativeAd),
+                          ),
+                        SizedBox(
+                          height: 30,
+                        ),
                         Shimmer.fromColors(
                           baseColor: Colors.white10,
                           highlightColor: Colors.lightGreenAccent,
                           child: Container(
-                            width: MediaQuery
-                                .of(context)
-                                .size
-                                .width / 2,
+                            width: MediaQuery.of(context).size.width / 2,
                             height: 10,
                             color: Colors.white,
                           ),
@@ -137,11 +200,15 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
                   ),
                 );
 
+
+            //Error Page
               case PromptGeneratingImageErrorState:
                 return const Center(
                   child: Text("Something Went Wrong"),
                 );
 
+
+            //Output Page
               case PromptGeneratingImageSuccessState:
                 final successState = state as PromptGeneratingImageSuccessState;
                 return SingleChildScrollView(
@@ -251,6 +318,7 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
 
               default:
                 return const SizedBox();
+
             }
           },
         ),
@@ -259,34 +327,32 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
   }
 
   int calculateMaxLines(BuildContext context) {
-    double screenHeight = MediaQuery
-        .of(context)
-        .size
-        .height;
+    double screenHeight = MediaQuery.of(context).size.height;
     double estimatedLineHeight = 190.0;
     int maxLines = (screenHeight / estimatedLineHeight).floor();
     return maxLines;
   }
 
-  Future<void> _saveImageToLocal(BuildContext context, Uint8List imageBytes) async {
+  Future<void> _saveImageToLocal(
+      BuildContext context, Uint8List imageBytes) async {
     try {
       final directory = await getExternalStorageDirectory();
       if (directory == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: External storage directory not found.'),
+            content: Text('Error: Enable Storage Permission'),
           ),
         );
         return;
       }
 
       final String storageRootPath = directory.path;
-      final String visifyFolderPath = '$storageRootPath/Visify';
+      final String visifyFolderPath = '$storageRootPath/AiImage_visify';
 
-      // Create the "Visify" folder if it doesn't exist
+      // Create the "AiImage_visify" folder if it doesn't exist
       final visifyFolder = Directory(visifyFolderPath);
       if (!await visifyFolder.exists()) {
-        await visifyFolder.create();
+        await visifyFolder.create(recursive: true);
       }
 
       final imageFile = File('$visifyFolderPath/generated_image.png');
@@ -298,7 +364,7 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
       print(visifyFolderPath);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Image saved to Visify folder and added to gallery.'),
+          content: Text('Saved to Folder - Pictures/AiImage_visify'),
         ),
       );
     } catch (e) {
@@ -308,8 +374,6 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
         ),
       );
       print(e);
-
     }
   }
-
 }

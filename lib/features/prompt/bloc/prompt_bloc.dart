@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
@@ -16,8 +15,9 @@ class PromptBloc extends Bloc<PromptEvent, PromptState> {
 
   FutureOr<void> promptEnteredEvent(
       PromptEnteredEvent event, Emitter<PromptState> emit) async {
-    emit(PromptGeneratingImageLoadState());
 
+    emit(PromptGeneratingImageLoadState());
+    await Future.delayed(Duration(seconds: 5));
     Uint8List? bytes = await PromptRepo.generateImage(event.prompt);
     if (bytes != null) {
       emit(PromptGeneratingImageSuccessState(bytes));
