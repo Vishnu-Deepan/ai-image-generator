@@ -28,6 +28,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  firebase_core:
+  firebase_auth:
+  cloud_firestore:
+  firebase_storage:
   gallery_saver:
   google_fonts:
   google_mobile_ads: ^5.0.0

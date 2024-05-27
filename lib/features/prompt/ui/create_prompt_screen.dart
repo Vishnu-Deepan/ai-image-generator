@@ -6,6 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:io';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../user_data.dart';
 import '../bloc/prompt_bloc.dart';
 
 class CreatePromptScreen extends StatefulWidget {
@@ -123,6 +124,7 @@ class _CreatePromptScreenState extends State<CreatePromptScreen> {
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(60.0),
           child: AppBar(
+            leading: IconButton(onPressed: (){Navigator.of(context).push(MaterialPageRoute(builder: (context)=>UserHistoryScreen()));}, icon: Icon(Icons.history)),
             actions: [
               IconButton(
                 onPressed: () {
