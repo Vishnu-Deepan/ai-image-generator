@@ -69,6 +69,7 @@ class PromptRepo {
       Map<String, dynamic> headers = {
         'Authorization':
             'Bearer $apiKey'
+        //replac your apiKey in config.dart
       };
 
       Map<String, dynamic> payload = {
